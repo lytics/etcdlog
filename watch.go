@@ -1,6 +1,7 @@
 package etcdlog
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -10,8 +11,18 @@ import (
 const recursive = true
 
 type Response struct {
-	Timestamp time.Time `json:"timestamp"`
+	WatchIndex uint64
+	Timestamp  time.Time `json:"timestamp"`
 	*etcd.Response
+}
+
+func (r *Response) String() string {
+	ts := r.Timestamp.Format("2006-01-02 15:04:05.999999999")
+	if len(r.Node.Nodes) > 0 {
+		return fmt.Sprintf("%-29s %d->%d %-16s %s %s %d %d (%d)", ts, r.WatchIndex, r.EtcdIndex, r.Action, r.Node.Key, r.Node.Value, r.Node.CreatedIndex, r.Node.ModifiedIndex, len(r.Node.Nodes))
+	} else {
+		return fmt.Sprintf("%-29s %d->%d %-16s %s %s %d %d", ts, r.WatchIndex, r.EtcdIndex, r.Action, r.Node.Key, r.Node.Value, r.Node.CreatedIndex, r.Node.ModifiedIndex)
+	}
 }
 
 type Watcher struct {
@@ -77,7 +88,7 @@ func (w *Watcher) Watch() <-chan *Response {
 				return
 			}
 			select {
-			case out <- &Response{now, resp}:
+			case out <- &Response{index, now, resp}:
 				index = resp.EtcdIndex + 1
 			case <-w.stop:
 				return
