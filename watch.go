@@ -19,9 +19,9 @@ type Response struct {
 func (r *Response) String() string {
 	ts := r.Timestamp.Format("2006-01-02 15:04:05.999999999")
 	if len(r.Node.Nodes) > 0 {
-		return fmt.Sprintf("%-29s %d->%d %-16s %s %s %d %d (%d)", ts, r.WatchIndex, r.EtcdIndex, r.Action, r.Node.Key, r.Node.Value, r.Node.CreatedIndex, r.Node.ModifiedIndex, len(r.Node.Nodes))
+		return fmt.Sprintf("%-29s %d %-16s %s %s %d (%d)", ts, r.Node.ModifiedIndex, r.Action, r.Node.Key, r.Node.Value, r.Node.CreatedIndex, len(r.Node.Nodes))
 	} else {
-		return fmt.Sprintf("%-29s %d->%d %-16s %s %s %d %d", ts, r.WatchIndex, r.EtcdIndex, r.Action, r.Node.Key, r.Node.Value, r.Node.CreatedIndex, r.Node.ModifiedIndex)
+		return fmt.Sprintf("%-29s %d %-16s %s %s %d", ts, r.Node.ModifiedIndex, r.Action, r.Node.Key, r.Node.Value, r.Node.CreatedIndex)
 	}
 }
 
@@ -59,7 +59,7 @@ func (w *Watcher) Watch() <-chan *Response {
 		}
 
 		for {
-			// Start the blocking watch after the last response's index.
+			// Start the blocking watch after the last response's modified index.
 			rawResp, err := protectedRawWatch(w.c, w.path, index, recursive, nil, w.stop)
 			now := time.Now() // grab wallclock as close to event as possible
 			if err != nil {
@@ -68,20 +68,14 @@ func (w *Watcher) Watch() <-chan *Response {
 					return
 				}
 
-				// This is probably a canceled request panic
-				// Wait a little bit, then continue as normal
-				// Can be removed after Go 1.5 is released
+				// This is probably a canceled request panic Wait a little bit, then
+				// continue as normal Can be removed after Go 1.5 is released
 				if ispanic(err) {
 					time.Sleep(250 * time.Millisecond)
 					continue
 				}
-
-				// Other RawWatch errors should be retried forever. If the node refresher
-				// also fails to communicate with etcd it will close the coordinator,
-				// closing ec.stop in the process which will cause this function to with
-				// ErrWatchStoppedByUser.
-				transport.CloseIdleConnections() // paranoia; let's get fresh connections on errors.
-				continue
+				w.err = err
+				return
 			}
 
 			if len(rawResp.Body) == 0 {

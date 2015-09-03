@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -16,15 +17,25 @@ func main() {
 	host := flag.String("host", "http://localhost:2379", "URL to etcd")
 	path := flag.String("path", "/", "path to watch (recursively)")
 	index := flag.Uint64("index", 0, "index to start from")
-	jsonout := flag.String("json", "-", "file to write json output to; '-' for stdout, '' for nowhere")
-	nojson := flag.Bool("nojson", false, "same as -json=''")
-	humout := flag.String("log", "", "file to write human output to; '-' for stderr, '' for nowhere")
+	jsonout := flag.String("json", "", "file to write json output to; '-' for stdout, '' for nowhere")
+	humout := flag.String("log", "-", "file to write human output to; '-' for stdout, '' for nowhere")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, `
+Log format:
+  - Timestamp (format: 2006-01-02 15:04:05.999999999)
+  - Modified Index
+  - Action
+  - Key
+  - Value
+  - Created Index
+`)
+
+	}
 
 	flag.Parse()
-
-	if *nojson {
-		*jsonout = ""
-	}
 
 	if *jsonout == "" && *humout == "" {
 		log.Fatal("expected one of -json or -log")
