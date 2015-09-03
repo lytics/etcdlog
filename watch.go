@@ -99,7 +99,9 @@ func (w *Watcher) Watch() <-chan *Response {
 			}
 			select {
 			case out <- &Response{index, now, resp}:
-				index++
+				// was index++ which could result in receiving an event more than once
+				// for non-root paths
+				index = resp.Node.ModifiedIndex + 1
 			case <-w.stop:
 				return
 			}
