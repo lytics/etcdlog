@@ -36,7 +36,7 @@ type Watcher struct {
 }
 
 func NewWatcher(c *etcd.Client, path string, index uint64) *Watcher {
-	return &Watcher{c: c, stop: make(chan bool)}
+	return &Watcher{c: c, path: path, stop: make(chan bool)}
 }
 
 // Watch returns a buffered chan of etcd responses. When the chan is closed,
