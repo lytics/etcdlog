@@ -48,6 +48,16 @@ func (w *Watcher) Watch() <-chan *Response {
 	index := w.index
 	go func() {
 		defer close(out)
+
+		if index == 0 {
+			resp, err := w.c.Get(w.path, false, false)
+			if err != nil {
+				w.err = err
+				return
+			}
+			index = resp.EtcdIndex
+		}
+
 		for {
 			// Start the blocking watch after the last response's index.
 			rawResp, err := protectedRawWatch(w.c, w.path, index, recursive, nil, w.stop)
@@ -89,7 +99,7 @@ func (w *Watcher) Watch() <-chan *Response {
 			}
 			select {
 			case out <- &Response{index, now, resp}:
-				index = resp.EtcdIndex + 1
+				index++
 			case <-w.stop:
 				return
 			}
