@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/coreos/go-etcd/etcd"
 	"github.com/lytics/etcdlog"
 )
 
@@ -115,9 +114,6 @@ mainloop:
 	}
 
 	if err := w.Err(); err != nil {
-		if ee, ok := err.(*etcd.EtcdError); ok {
-			log.Println(ee.Index)
-		}
 		log.Fatal("error when closing: ", err)
 	}
 }
